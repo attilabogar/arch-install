@@ -177,13 +177,13 @@ locale-gen
 # some extra stuff needed for ansible
 pacman --noconfirm -Syy
 pacman --noconfirm -S intel-ucode openssh python2 bridge-utils
-systemctl enable sshd
+# systemctl enable sshd
 
-# check if wired ethernet
-if [ -s /etc/netctl/wired ]
-then
-  netctl enable wired
-fi
+# check for wired ethernet
+# if [ -s /etc/netctl/wired ]
+# then
+#   netctl enable wired
+# fi
 
 # create initrd
 mkinitcpio -p linux-lts
@@ -226,7 +226,7 @@ else
   if ! [ "$UNLOCK" = "none" ]
   then
     cp -p /mnt/etc/default/grub /mnt/etc/default/grub.pacnew
-    sed -i -e s,^GRUB_CMDLINE_LINUX=.*$,GRUB_CMDLINE_LINUX=\"cryptdevice=UUID=$LUKS_UUID:cryptroot${LUKS_OPTS} net.ifnames=0\", /mnt/etc/default/grub
+    sed -i -e "s,^GRUB_CMDLINE_LINUX=.*$,GRUB_CMDLINE_LINUX=\"cryptdevice=UUID=$LUKS_UUID:cryptroot${LUKS_OPTS} net.ifnames=0\"," /mnt/etc/default/grub
   fi
   # generate fresh grub config
   arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
@@ -235,7 +235,7 @@ fi
 # swap
 if [ $ROTATIONAL = 0 ]
 then
-  echo 'vm.swappiness = 0' > /mnt/etc/sysctl.d/swap-on-ssd.conf
+  echo 'vm.swappiness = 0' > /mnt/etc/sysctl.d/swap-off.conf
 else
   dd if=/dev/zero of=/mnt/swapfile bs=1024k count=1024
   chmod 600 /mnt/swapfile
@@ -247,4 +247,4 @@ fi
 # sync file systems
 sync
 
-echo "NOTE: check for network setup"
+echo "NOTE: check for network setup and enable"

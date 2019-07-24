@@ -29,7 +29,7 @@ fi
 export ROTATIONAL=$(cat /sys/block/${DISK##/dev/}/queue/rotational)
 
 # set up country specific source
-MIRRORLIST="https://www.archlinux.org/mirrorlist/?country=${COUNTRY}&protocol=http&protocol=https&ip_version=4&use_mirror_status=on"
+MIRRORLIST="https://www.archlinux.org/mirrorlist/?country=${COUNTRY}&protocol=https&ip_version=4&use_mirror_status=on"
 curl -s "$MIRRORLIST" | sed 's/^#Server/Server/' > /etc/pacman.d/mirrorlist
 
 # wipe off existing systems

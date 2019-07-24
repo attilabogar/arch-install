@@ -8,7 +8,7 @@ BUILDROOT="${BUILDROOT:-/srv/build}"
 
 # use UK mirror
 COUNTRY=${COUNTRY:-GB}
-MIRRORLIST="https://www.archlinux.org/mirrorlist/?country=${COUNTRY}&protocol=http&protocol=https&ip_version=4&use_mirror_status=on"
+MIRRORLIST="https://www.archlinux.org/mirrorlist/?country=${COUNTRY}&protocol=https&ip_version=4&use_mirror_status=on"
 
 # use tokland's archbootstrap
 ARCHBOOTSTRAP="https://raw.githubusercontent.com/tokland/arch-bootstrap/master/arch-bootstrap.sh"

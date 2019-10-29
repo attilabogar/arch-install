@@ -58,7 +58,6 @@ PACKAGES="$(pacman -Sqg base | sed 's/^linux$/&-lts/') linux-lts-headers base-de
 PACKAGES="$PACKAGES openssh python2 bridge-utils ethtool vim dmidecode tcpdump bc rsync net-tools parted"
 [[ $HAVE_EFI == 0 ]] && PACKAGES="$PACKAGES grub"
 [[ $HAVE_EFI == 1 ]] && PACKAGES="$PACKAGES efibootmgr"
-[[ $HAVE_HDD == 0 ]] && PACKAGES="$PACKAGES f2fs-tools"
 [[ $HAVE_INTEL == 1 ]] && PACKAGES="$PACKAGES intel-ucode"
 [[ $HAVE_INTEL == 0 ]] && PACKAGES="$PACKAGES amd-ucode"
 [[ $HAVE_WIFI == 1 ]] && PACKAGES="$PACKAGES rfkill dialog wpa_supplicant crda"
@@ -126,12 +125,7 @@ else
 fi
 
 # CREATE ROOT FILESYSTEM
-if [[ $HAVE_HDD == 1 ]]
-then
-  mkfs.xfs -f -L $NODE-rootfs $ROOTDEV
-else
-  mkfs.f2fs -f -l $NODE-rootfs $ROOTDEV
-fi
+mkfs.xfs -f -L $NODE-rootfs $ROOTDEV
 
 MOUNT_OPTS="defaults"
 [[ $HAVE_TRIM == 1 ]] && MOUNT_OPTS="$MOUNT_OPTS,discard"

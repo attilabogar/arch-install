@@ -14,6 +14,7 @@ export LANG=${LANG:-en_GB.UTF-8}
 export TZ=${TZ:-Europe/London}
 export ROOTPW=${ROOTPW:-root}
 export UNLOCK=${UNLOCK:-none}
+export KERNEL=${KERNEL:-linux-lts}
 # size in GiB or 100% (default)
 export SIZE=${SIZE:-100%}
 [[ $SIZE == "100%" ]] || SIZE=$[SIZE*1024*1024*2-1]s
@@ -54,8 +55,8 @@ curl -s "$MIRRORLIST" | sed 's/^#Server/Server/' > /etc/pacman.d/mirrorlist
 
 # set up required packages
 pacman -Syy
-PACKAGES="$(pacman -Sqg base | sed 's/^linux$/&-lts/') linux-lts-headers base-devel"
-PACKAGES="$PACKAGES openssh python2 bridge-utils ethtool vim dmidecode tcpdump bc rsync net-tools parted"
+PACKAGES="base base-devel $KERNEL $KERNEL-headers linux-firmware"
+PACKAGES="$PACKAGES xfsprogs netctl dhcpcd man-db usbutils openssh python2 bridge-utils ethtool vim dmidecode tcpdump bc rsync net-tools parted"
 [[ $HAVE_EFI == 0 ]] && PACKAGES="$PACKAGES grub"
 [[ $HAVE_EFI == 1 ]] && PACKAGES="$PACKAGES efibootmgr"
 [[ $HAVE_INTEL == 1 ]] && PACKAGES="$PACKAGES intel-ucode"
@@ -99,7 +100,7 @@ then
   mkfs.fat -v -F32 -n ESP ${DISK}1
 else
   # BIOS
-  mkfs.xfs -f -L $NODE-boot ${DISK}1
+  mkfs.xfs -f -L bootfs ${DISK}1
 fi
 
 # CREATE LUKS DEVICE IF NEEDED
@@ -125,7 +126,7 @@ else
 fi
 
 # CREATE ROOT FILESYSTEM
-mkfs.xfs -f -L $NODE-rootfs $ROOTDEV
+mkfs.xfs -f -L rootfs $ROOTDEV
 
 MOUNT_OPTS="defaults"
 [[ $HAVE_TRIM == 1 ]] && MOUNT_OPTS="$MOUNT_OPTS,discard"
@@ -157,6 +158,9 @@ echo "KEYMAP=$KEYMAP" > /mnt/etc/vconsole.conf
 echo "$LANG UTF-8" >> /mnt/etc/locale.gen
 echo "LANG=$LANG" > /mnt/etc/locale.conf
 
+# generate locale(s)
+arch-chroot /mnt locale-gen
+
 if [[ $HAVE_CRYPT == 1 ]]
 then
   # fix hooks
@@ -165,14 +169,8 @@ then
     /mnt/etc/mkinitcpio.conf
 fi
 
-# root password
-echo root:$ROOTPW | chpasswd -R /mnt
-
-# generate locale(s)
-arch-chroot /mnt locale-gen
-
 # create initrd
-arch-chroot /mnt mkinitcpio -p linux-lts
+arch-chroot /mnt mkinitcpio -p $KERNEL
 
 if [[ $HAVE_EFI == 1 ]]
 then
@@ -198,9 +196,9 @@ then
   [[ $HAVE_INTEL == 0 ]] && MICROCODE="amd-ucode.img"
   cat > /mnt/boot/loader/entries/arch.conf << EOD
 title Arch Linux
-linux /vmlinuz-linux-lts
+linux /vmlinuz-$KERNEL
 initrd /$MICROCODE
-initrd /initramfs-linux-lts.img
+initrd /initramfs-$KERNEL.img
 options $KERNEL_CMDLINE
 EOD
 else
@@ -212,23 +210,22 @@ else
   arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 fi
 
-# swap
-if [[ $HAVE_HDD == 0 ]]
-then
-  echo 'vm.swappiness = 0' > /mnt/etc/sysctl.d/no-swap.conf
-else
-  dd if=/dev/zero of=/mnt/swapfile bs=1024k count=1024
-  chmod 600 /mnt/swapfile
-  mkswap /mnt/swapfile
-  echo  >> /mnt/etc/fstab
-  echo '# swap on file' >> /mnt/etc/fstab
-  echo '/swapfile none swap defaults 0 0' >> /mnt/etc/fstab
-fi
+# 1GiB swap in a file
+echo 'vm.swappiness = 10' > /mnt/etc/sysctl.d/swap.conf
+dd if=/dev/zero of=/mnt/swapfile bs=1024k count=1024
+chmod 600 /mnt/swapfile
+mkswap /mnt/swapfile
+echo  >> /mnt/etc/fstab
+echo '# swap on file' >> /mnt/etc/fstab
+echo '/swapfile none swap defaults 0 0' >> /mnt/etc/fstab
 
 # auto-cleaning pacman cache
 find /mnt/var/cache/pacman/pkg/ -type f -delete
 curl -R -L -o /mnt/usr/share/libalpm/hooks/package-cleanup.hook \
   https://raw.githubusercontent.com/archlinux/archlinux-docker/master/rootfs/usr/share/libalpm/hooks/package-cleanup.hook
+
+# root password
+echo root:$ROOTPW | chpasswd -R /mnt
 
 # sync file systems
 sync
